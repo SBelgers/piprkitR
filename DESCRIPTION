@@ -1,0 +1,29 @@
+Package: piprkitR
+Title: R Interface to 'piprkit' for Pupil Light Response Analysis
+Version: 0.1.0
+Authors@R:
+    person("S.", "Belgers", , "s.belgers@tue.nl", role = c("aut", "cre"))
+Description: An R interface to 'piprkit', a 'Python' package for processing
+    pupil data with a focus on the post-illumination pupil response (PIPR):
+    filtering, blink removal, baseline correction, PIPR metrics, and fitting
+    a phase model of the pupil light response. The complete 'piprkit' API is
+    available from R through 'reticulate'. All computations run in the
+    'Python' package, so the results are identical to those in 'Python'.
+    'Python' and 'piprkit' are installed automatically on first use.
+License: MIT + file LICENSE
+URL: https://github.com/SBelgers/piprkitR,
+    https://github.com/SBelgers/piprkit, https://sbelgers.github.io/piprkit/
+BugReports: https://github.com/SBelgers/piprkitR/issues
+Depends:
+    R (>= 4.0)
+Imports:
+    graphics,
+    reticulate (>= 1.41)
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+SystemRequirements: Python (>= 3.12) with the 'piprkit' package; both are
+    installed automatically by 'reticulate' on first use.
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
