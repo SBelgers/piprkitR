@@ -22,11 +22,7 @@ pak::pak("SBelgers/piprkitR")
 Python and piprkit are installed automatically the first time piprkit is used: reticulate sets up its
 own Python environment with piprkit. This needs an internet connection once and takes about a minute.
 
-To use your own Python environment instead, install piprkit there (`pip install piprkit`, Python 3.12
-or newer) and select it before piprkit is first used, e.g. with `reticulate::use_virtualenv()`. Note
-that reticulate also uses an activated virtual environment (`VIRTUAL_ENV`) or the Python in
-`RETICULATE_PYTHON`. Either install piprkit there, or run `Sys.setenv(RETICULATE_PYTHON = "managed")`
-before `library(piprkitR)` to use the automatic environment.
+
 
 ## Example
 
@@ -39,9 +35,6 @@ before `library(piprkitR)` to use the automatic environment.
 <td>
 
 ```python
-import tempfile
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 
 import piprkit
@@ -62,14 +55,9 @@ plt <- reticulate::import("matplotlib.pyplot")
 
 ```python
 ps = piprkit.load_real_series()
-ps.filters.rolling_mean(0.1)
-ps.filters.limit_rate_of_change()
-ps.drop_nan()
-ps.add_blinks([(153.5, 156.5)])
-ps.filters.remove_blinks()
-ps.trim_size()
-
-trials = ps.split(pre_stimulus_duration=10.0, post_stimulus_duration=55.0)
+measurements = ps.split(
+    pre_stimulus_duration=12.0, post_stimulus_duration=55.0
+)
 ```
 
 </td>
@@ -77,14 +65,9 @@ trials = ps.split(pre_stimulus_duration=10.0, post_stimulus_duration=55.0)
 
 ```r
 ps <- piprkit$load_real_series()
-ps$filters$rolling_mean(0.1)
-ps$filters$limit_rate_of_change()
-ps$drop_nan()
-ps$add_blinks(list(c(153.5, 156.5)))
-ps$filters$remove_blinks()
-ps$trim_size()
-
-trials <- ps$split(pre_stimulus_duration = 10.0, post_stimulus_duration = 55.0)
+measurements <- ps$split(
+  pre_stimulus_duration = 12.0, post_stimulus_duration = 55.0
+)
 ```
 
 </td>
@@ -93,30 +76,29 @@ trials <- ps$split(pre_stimulus_duration = 10.0, post_stimulus_duration = 55.0)
 <td>
 
 ```python
-rows = []
-fig, axes = plt.subplots(len(trials), 1, figsize=(8, 2.5 * len(trials)), sharex=True, sharey=True)
-for number, (trial, ax) in enumerate(zip(trials, axes), start=1):
-    baseline = trial.metrics.baseline(duration=5.0)
-    trial.filters.apply_baseline_correction(duration=5.0)
-    model = piprkit.PhaseModel(trial, baseline_duration=5.0)
+fig, axes = plt.subplots(
+    1, 2, sharey=True, 
+    figsize=(10, 4.5), 
+    layout="constrained"
+)
 
-    results = [
-        baseline,
-        trial.metrics.peak_constriction(),
-        trial.metrics.time_to_peak(),
-        trial.metrics.pipr_6s(),
-        trial.metrics.auc_early(baseline_duration=5.0),
-        model.metrics.constriction_v(),
-        model.metrics.redilation_v(),
-        model.metrics.plateau_pipr(),
-    ]
-    rows += piprkit.metric_rows(results, participant="example", trial=number)
-
-    model.plot(ax=ax, scatter=True, s=2, color="grey", label=f"Trial {number}")
-    model.plot_phases(ax=ax)
-    model.plot_light_stimulus(ax=ax)
-    ax.legend(fontsize=7, loc="lower right")
-axes[-1].set_xlabel("Time (s)")
+for i, pm in enumerate(measurements[4:6]):
+    # Minor amount of processing
+    pm.filters.rolling_median(1)
+    pm.filters.apply_baseline_correction()
+    # Get the 6s-PIPR from the measurement
+    pipr_6s = pm.metrics.pipr_6s()
+    # Fit the phase model to the measurement 
+    # and get the 6s-PIPR
+    model = piprkit.PhaseModel(pm)
+    pm_model = model.to_measurement()
+    pipr_6s_model = pm_model.metrics.pipr_6s()
+    # Display the results
+    pm.plot(ax=axes[i])
+    model.plot_phases(ax=axes[i])
+    pm.plot_light_stimulus(ax=axes[i])
+    pipr_6s.plot(ax=axes[i])
+    pipr_6s_model.plot(ax=axes[i])
 plt.show()
 ```
 
@@ -124,88 +106,42 @@ plt.show()
 <td>
 
 ```r
-rows <- list()
-axes <- plt$subplots(length(trials), 1L, figsize = c(8, 2.5 * length(trials)), sharex = TRUE, sharey = TRUE)[[2]]
-for (number in seq_along(trials)) {
-  trial <- trials[[number]]
-  ax <- axes[[number]]
-  baseline <- trial$metrics$baseline(duration = 5.0)
-  trial$filters$apply_baseline_correction(duration = 5.0)
-  model <- piprkit$PhaseModel(trial, baseline_duration = 5.0)
+axes <- plt$subplots(
+  1L, 2L, sharey = TRUE, 
+  figsize = c(10, 4.5), 
+  layout = "constrained"
+)[[2]]
 
-  results <- list(
-    baseline,
-    trial$metrics$peak_constriction(),
-    trial$metrics$time_to_peak(),
-    trial$metrics$pipr_6s(),
-    trial$metrics$auc_early(baseline_duration = 5.0),
-    model$metrics$constriction_v(),
-    model$metrics$redilation_v(),
-    model$metrics$plateau_pipr()
-  )
-  rows <- c(rows, piprkit$metric_rows(results, participant = "example", trial = number))
-
-  model$plot(ax = ax, scatter = TRUE, s = 2, color = "grey", label = sprintf("Trial %d", number))
-  model$plot_phases(ax = ax)
-  model$plot_light_stimulus(ax = ax)
-  ax$legend(fontsize = 7, loc = "lower right")
+for (i in 1:2) {
+  pm <- measurements[[4 + i]]
+  # Minor amount of processing
+  pm$filters$rolling_median(1)
+  pm$filters$apply_baseline_correction()
+  # Get the 6s-PIPR from the measurement
+  pipr_6s <- pm$metrics$pipr_6s()
+  # Fit the phase model to the measurement 
+  # and get the 6s-PIPR
+  model <- piprkit$PhaseModel(pm)
+  pm_model <- model$to_measurement()
+  pipr_6s_model <- pm_model$metrics$pipr_6s()
+  # Display the results
+  pm$plot(ax = axes[[i]])
+  model$plot_phases(ax = axes[[i]])
+  pm$plot_light_stimulus(ax = axes[[i]])
+  pipr_6s$plot(ax = axes[[i]])
+  pipr_6s_model$plot(ax = axes[[i]])
 }
-axes[[length(trials)]]$set_xlabel("Time (s)")
-plt$savefig("full_example.png")
-```
-
-</td>
-</tr>
-<tr>
-<td>
-
-```python
-with tempfile.TemporaryDirectory() as folder:
-    path = Path(folder) / "metrics.csv"
-    piprkit.save_metric_rows(rows, path)
-    print(path.read_text())
-```
-
-</td>
-<td>
-
-```r
-path <- file.path(tempdir(), "metrics.csv")
-piprkit$save_metric_rows(rows, path)
-writeLines(readLines(path))
+plt$savefig("example.png")
 ```
 
 </td>
 </tr>
 </table>
 
-The tests of this package run this example in R and in Python and check that the metrics and the CSV
-files are identical.
+The tests of this package run a longer example, with more metrics, in R and in Python and check that
+the metrics and the CSV files are identical.
 
-On Windows, a separate Python process can give results that differ in about the tenth significant
-digit for the nonlinear redilation fit (`redilation_v()`, `plateau_pipr()`). Python on Windows sets the
-x87 floating-point unit to double precision, while R keeps it at extended precision. All other metrics
-are bit-identical, and on Linux and macOS there is no such difference.
 
-## From Python to R
-
-| Python | R |
-|---|---|
-| `import piprkit` | `library(piprkitR)` |
-| `piprkit.load_real_series()` | `piprkit$load_real_series()` |
-| `ps.filters.rolling_mean(0.1)` | `ps$filters$rolling_mean(0.1)` |
-| `[(153.5, 156.5)]` | `list(c(153.5, 156.5))` |
-| `phases=("baseline", "redilation")` | `phases = c("baseline", "redilation")` |
-| `None`, `True`, `False` | `NULL`, `TRUE`, `FALSE` |
-| `trials[0]` | `trials[[1]]` |
-| `for number, trial in enumerate(trials, start=1):` | `for (number in seq_along(trials)) { trial <- trials[[number]]; ... }` |
-| `rows += piprkit.metric_rows(results, trial=number)` | `rows <- c(rows, piprkit$metric_rows(results, trial = number))` |
-| `f"{result:.2f}"` | `sprintf("%.2f", result)` |
-
-Metric results, such as `trial$metrics$pipr_6s()`, are numbers in R that keep the Python result:
-`result$get_name()` gives the name of the metric and `result$get_flags()` the flags of a fitted phase.
-Collect them with `list()` to pass them to `piprkit$metric_rows()` or `piprkit$net_pipr()`; `c()` turns
-them into plain numbers.
 
 ## Good to know
 
@@ -231,19 +167,6 @@ ax$figure$savefig("model.png")
 
 R cannot reliably show matplotlib windows, so piprkitR uses matplotlib's non-interactive agg backend,
 as reticulate does in R Markdown. Set the environment variable `MPLBACKEND` to use another backend.
-
-## Versions
-
-Report the versions used with:
-
-```r
-packageVersion("piprkitR")
-piprkit$`__version__`
-reticulate::py_config()
-```
-
-A specific version of piprkit can be requested with `reticulate::py_require("piprkit==0.1.0")` before
-piprkit is first used.
 
 ## License
 
