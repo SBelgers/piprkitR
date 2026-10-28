@@ -56,7 +56,8 @@ plt <- reticulate::import("matplotlib.pyplot")
 ```python
 ps = piprkit.load_real_series()
 measurements = ps.split(
-    pre_stimulus_duration=12.0, post_stimulus_duration=55.0
+    pre_stimulus_duration=12.0, 
+    post_stimulus_duration=55.0
 )
 ```
 
@@ -66,7 +67,8 @@ measurements = ps.split(
 ```r
 ps <- piprkit$load_real_series()
 measurements <- ps$split(
-  pre_stimulus_duration = 12.0, post_stimulus_duration = 55.0
+  pre_stimulus_duration = 12.0, 
+  post_stimulus_duration = 55.0
 )
 ```
 
